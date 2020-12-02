@@ -3,7 +3,7 @@
 My solutions for Advent of Code 2020 - https://adventofcode.com/
 
 - [x] Day 1
-- [ ] Day 2
+- [x] Day 2
 - [ ] Day 3
 - [ ] Day 4
 - [ ] Day 5
