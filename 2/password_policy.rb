@@ -21,7 +21,11 @@ class PasswordPolicy
     @char = char
   end
 
-  def valid?(password)
+  def valid_for_sled_rental_place_down_the_road?(password)
     password.count(char).between?(min, max)
+  end
+
+  def valid_for_toboggan_corporate_policy?(password)
+    (password[min - 1] == char) ^ (password[max - 1] == char)
   end
 end
