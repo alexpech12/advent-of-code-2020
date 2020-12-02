@@ -1,10 +1,10 @@
 class PasswordPolicy
-
   attr_reader :min, :max, :char
 
   class << self
     # Expects a string in the format "<min>-<max> <char>"
     def parse(str)
+      # We could use a regex here, but I won't on account of I hate them.
       range, char = str.split(' ')
       min, max = range.split('-')
       new(
@@ -26,6 +26,7 @@ class PasswordPolicy
   end
 
   def valid_for_toboggan_corporate_policy?(password)
+    # We can use an XOR !!!
     (password[min - 1] == char) ^ (password[max - 1] == char)
   end
 end
