@@ -28,10 +28,10 @@ def read_file_groups(filename)
 
   unless group.empty?
     output << if block_given?
-      yield(group)
-    else
-      group
-    end
+                yield(group)
+              else
+                group
+              end
   end
 
   output
