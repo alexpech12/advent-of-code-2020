@@ -1,4 +1,4 @@
-DEBUG = true
+DEBUG = false
 
 def puts_debug(str)
   puts str if DEBUG
@@ -27,6 +27,10 @@ class GameGirl
     def execute(_context)
       puts_debug "Executing #{self.class} #{argument} (Exec count is #{exec_count})"
       @exec_count += 1
+    end
+
+    def reset_exec_count
+      @exec_count = 0
     end
   end
 
@@ -69,7 +73,13 @@ class GameGirl
     end
   end
 
-  class InfiniteLoopDetected < RuntimeError; end
+  class InfiniteLoopDetected < RuntimeError
+    attr_reader :execution_log
+
+    def initialize(execution_log)
+      @execution_log = execution_log
+    end
+  end
 
   attr_reader :context, :instructions
 
@@ -81,9 +91,17 @@ class GameGirl
     @instructions = boot_code
   end
 
+  def reset
+    @context = Context.new
+    instructions.each(&:reset_exec_count)
+  end
+
   def run_program
+    execution_log = []
     until terminated?
-      raise InfiniteLoopDetected if infinite_loop_detected?
+      raise InfiniteLoopDetected.new(execution_log), 'Ho ho HO NO!' if infinite_loop_detected?
+
+      execution_log << { pct: context.pct, instruction: next_instruction }
       run_step
     end
   end
@@ -104,5 +122,9 @@ class GameGirl
 
   def next_instruction
     instructions[context.pct]
+  end
+
+  def patch_instruction(pct:, instruction:)
+    instructions[pct] = instruction
   end
 end
