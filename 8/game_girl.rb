@@ -69,6 +69,8 @@ class GameGirl
     end
   end
 
+  class InfiniteLoopDetected < RuntimeError; end
+
   attr_reader :context, :instructions
 
   def initialize
@@ -79,14 +81,21 @@ class GameGirl
     @instructions = boot_code
   end
 
-  def run_until_infinite_loop
-    run_step until infinite_loop_detected?
+  def run_program
+    until terminated?
+      raise InfiniteLoopDetected if infinite_loop_detected?
+      run_step
+    end
   end
 
   def run_step
     puts_debug "Next instruction is #{next_instruction.class}, #{next_instruction.argument}..."
     next_instruction.execute(context)
     context.step
+  end
+
+  def terminated?
+    next_instruction.nil?
   end
 
   def infinite_loop_detected?

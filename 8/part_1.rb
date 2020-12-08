@@ -7,5 +7,9 @@ end
 
 gg = GameGirl.new
 gg.load_boot_code(boot_code)
-gg.run_until_infinite_loop
+begin
+  gg.run_program
+rescue GameGirl::InfiniteLoopDetected
+  puts 'Detected infinite loop!'
+end
 puts "The accumulator value was #{gg.context.acc} before hitting the infinite loop"
