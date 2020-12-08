@@ -4,6 +4,8 @@ class BagRule
 
     class << self
       def parse(str)
+        return nil if str.to_i.zero?
+
         ContainingBagRule.new(
           str.split(' ').first.to_i,
           str.split(' ')[1..2].join(' ')
@@ -35,6 +37,15 @@ class BagRule
   end
 
   def containing_colours
-    containing_bags.map(&:colour)
+    containing_bags&.map(&:colour)
+  end
+
+  def amount_of_contained_bags(bag_tree)
+    return 0 if containing_bags.compact.empty?
+
+    # Find children in the tree, and get amount for each child
+    containing_bags.reduce(0) do |sum, bag|
+      sum + bag.amount + bag.amount * bag_tree[bag.colour].amount_of_contained_bags(bag_tree)
+    end
   end
 end
