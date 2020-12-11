@@ -99,6 +99,25 @@ class SeatingGrid
     grid
   end
 
+  def people_do_things_better
+    grid = SeatingGrid.new
+    rows.each_with_index do |row, y|
+      new_row = row.map.with_index do |s, x|
+        if s.floor?
+          s.dup
+        elsif s.empty? && visible_seats(x, y).count(&:occupied?).zero?
+          s.dup.occupied!
+        elsif s.occupied? && visible_seats(x, y).count(&:occupied?) >= 5
+          s.dup.empty!
+        else
+          s.dup
+        end
+      end
+      grid << new_row
+    end
+    grid
+  end
+
   def occupied_seats
     rows.flatten.select(&:occupied?)
   end
@@ -119,8 +138,39 @@ class SeatingGrid
     seats
   end
 
+  def visible_seats(x, y)
+    seats = []
+    # Start on the left and move around clockwise
+    seats << first_seat_in_direction(x, y, -1, 0)
+    seats << first_seat_in_direction(x, y, -1, -1)
+    seats << first_seat_in_direction(x, y, 0, -1)
+    seats << first_seat_in_direction(x, y, 1, -1)
+    seats << first_seat_in_direction(x, y, 1, 0)
+    seats << first_seat_in_direction(x, y, 1, 1)
+    seats << first_seat_in_direction(x, y, 0, 1)
+    seats << first_seat_in_direction(x, y, -1, 1)
+    seats.compact
+  end
+
+  def first_seat_in_direction(start_x, start_y, direction_x, direction_y)
+    x = start_x + direction_x
+    y = start_y + direction_y
+    s = seat(x, y)
+    while !s.nil? && s.floor?
+      x += direction_x
+      y += direction_y
+      s = seat(x, y)
+    end
+    s
+  end
+
   def seat(x, y)
-    rows[y][x]
+    return nil if x.negative? || y.negative?
+
+    ry = rows[y]
+    return nil if ry.nil?
+
+    ry[x]
   end
 
   def to_s
