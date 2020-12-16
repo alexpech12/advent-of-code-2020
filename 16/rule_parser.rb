@@ -9,6 +9,10 @@ class Rule
   def valid?(value)
     ranges.any? { |range| range.cover?(value) }
   end
+
+  def to_s
+    "#{name}: #{ranges.map { |range| "(#{range})" }.join(' or ')}"
+  end
 end
 
 class RuleParser
