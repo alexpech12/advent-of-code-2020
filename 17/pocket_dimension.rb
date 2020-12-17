@@ -1,3 +1,6 @@
+require_relative 'array_extension.rb'
+require_relative 'range_extension.rb'
+
 class PocketDimension
   class Cube
     attr_reader :active, :position
@@ -5,18 +8,6 @@ class PocketDimension
     def initialize(position, active)
       @position = position
       @active = active
-    end
-
-    def x
-      position[0]
-    end
-
-    def y
-      position[1]
-    end
-
-    def z
-      position[2]
     end
 
     def activate!
@@ -36,47 +27,50 @@ class PocketDimension
     end
   end
 
-  attr_reader :grid, :active_cubes
+  attr_reader :grid, :active_cubes, :dimensions, :neighbour_offsets
 
-  def initialize
+  def initialize(dimensions = 3)
     @grid = []
     @active_cubes = []
+    @dimensions = dimensions
+    @neighbour_offsets = (-1..1).nested_map(dimensions)
+                                .flatten(dimensions - 1)
+                                .-([Array.new(dimensions, 0)])
+                                .freeze.each(&:freeze)
   end
 
-  def fetch_cube(x, y, z)
+  def fetch_cube(location)
+    # This is a bit of a hack, but because our arrays can't use negative indices,
+    # we'll just offset everything by some large number before we actually fetch/store things.
+    safety_offset = 1_000
+    abs_location = location.combine(Array.new(dimensions, safety_offset))
 
-    x += 1_000
-    y += 1_000
-    z += 1_000
+    grid_part = grid
+    abs_location[0..-2].each do |i|
+      next_part = grid_part[i]
+      grid_part[i] = [] if next_part.nil?
+      grid_part = grid_part[i]
+    end
 
-    grid[x] = [] if grid[x].nil?
-    grid[x][y] = [] if grid[x][y].nil?
-    grid[x][y][z] = Cube.new([x - 1000, y - 1000, z - 1000], false) if grid[x][y][z].nil?
-
-    grid[x][y][z]
+    grid_part[abs_location.last] = Cube.new(location.dup, false) if grid_part[abs_location.last].nil?
+    grid_part[abs_location.last]
   end
 
   # Returns the ranges required to be processed, based on the min/max positions of active cubes
-  def processing_bounds
-    minmax_x = active_cubes.map(&:x).minmax
-    minmax_y = active_cubes.map(&:y).minmax
-    minmax_z = active_cubes.map(&:z).minmax
+  def processing_bounds(buffer = [-1, 1])
+    return nil if active_cubes.empty?
 
-    minmax_x[0] -= 1
-    minmax_y[0] -= 1
-    minmax_z[0] -= 1
-    minmax_x[1] += 1
-    minmax_y[1] += 1
-    minmax_z[1] += 1
-    [
-      (minmax_x[0]..minmax_x[1]),
-      (minmax_y[0]..minmax_y[1]),
-      (minmax_z[0]..minmax_z[1])
-    ]
+    minmaxes = (1..dimensions).map do |dimension|
+      active_cubes.map do |cube|
+        cube.position[dimension - 1]
+      end.minmax.combine(buffer)
+    end
+
+    minmaxes.map(&:to_range)
   end
 
-  def activate_cube!(x, y, z)
-    fetch_cube(x, y, z).tap do |cube|
+  def activate_cube!(location)
+    fetch_cube(location).tap do |cube|
       break if cube.active?
 
       cube.activate!
@@ -84,8 +78,8 @@ class PocketDimension
     end
   end
 
-  def deactivate_cube!(x, y, z)
-    fetch_cube(x, y, z).tap do |cube|
+  def deactivate_cube!(location)
+    fetch_cube(location).tap do |cube|
       break if cube.inactive?
 
       cube.deactivate!
@@ -93,60 +87,46 @@ class PocketDimension
     end
   end
 
-  def neighbouring_cubes(x, y, z)
-    neighbours(x, y, z).map { |location| fetch_cube(*location) }
+  def neighbouring_cubes(location)
+    neighbours(location).map { |l| fetch_cube(l) }
   end
 
-  NEIGHBOUR_OFFSETS = [
-    [-1,-1,-1],
-    [-1,-1,0],
-    [-1,-1,1],
-    [-1,0,-1],
-    [-1,0,0],
-    [-1,0,1],
-    [-1,1,-1],
-    [-1,1,0],
-    [-1,1,1],
-    [0,-1,-1],
-    [0,-1,0],
-    [0,-1,1],
-    [0,0,-1],
-    [0,0,1],
-    [0,1,-1],
-    [0,1,0],
-    [0,1,1],
-    [1,-1,-1],
-    [1,-1,0],
-    [1,-1,1],
-    [1,0,-1],
-    [1,0,0],
-    [1,0,1],
-    [1,1,-1],
-    [1,1,0],
-    [1,1,1]
-  ].freeze.each(&:freeze)
+  def neighbours(location)
+    neighbour_offsets.map { |offset| location.combine(offset) }
+  end
 
-  def neighbours(x, y, z)
-    origin = [x, y, z]
-    NEIGHBOUR_OFFSETS.map { |offset| origin.map.with_index { |n, i| n + offset[i] } }
+  def each_in_bounds(bounds = processing_bounds, *args, &block)
+    if bounds.count == 1
+      bounds.first.each do |value|
+        yield(*args, value)
+      end
+    else
+      bounds.first.each do |value|
+        remaining_bounds = bounds[1..-1]
+        each_in_bounds(remaining_bounds, *(args + [value]), &block)
+      end
+    end
   end
 
   def print_to_display
-    range_x, range_y, range_z = processing_bounds
-    range_z.each do |z|
-      puts "\nz=#{z}"
+    # Print in 2d slices
+    bounds = processing_bounds([0, 0])
+    range_x, range_y = bounds[0..1]
+    extra_bounds = bounds[2..-1]
+
+    each_in_bounds(extra_bounds) do |*values|
+      values = [values] unless values.is_a? Array
+      puts
+      puts values.map.with_index { |v, i| "d#{i + 2}=#{v}" }.join(', ')
       range_y.each do |y|
         range_x.each do |x|
-          cube = fetch_cube(x, y, z)
+          cube = fetch_cube([x, y] + values)
 
-          if cube.active?
-            print '#'
-          else
-            print '.'
-          end
+          print(cube.active? ? '#' : '.')
         end
         puts
       end
     end
+    puts
   end
 end
