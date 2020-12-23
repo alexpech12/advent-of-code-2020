@@ -35,6 +35,40 @@ rule_map.each do |_, rule|
   rule.link_rules(rule_map)
 end
 
+puts "All matching strings for rule 42:"
+# puts rule_map['42'].all_matching_strings.to_s
+
+# 20 -> 54 -> 89
+puts rule_map['1'].all_matching_strings.to_s
+puts
+puts rule_map['14'].all_matching_strings.to_s
+puts
+puts rule_map['21'].all_matching_strings.to_s
+puts
+puts rule_map['26'].all_matching_strings.to_s
+return
+# puts "Sub rules for rule 8:"
+# sub_rules = ['8']
+# until sub_rules.empty?
+#   sub_rules.dup.each do |rule|
+#     sub_rules -= rule
+#     puts "#{rule_map[rule.sub_rule_strings_1]} | #{rule_map[rule.sub_rule_strings_2]}"
+#   end
+# end
+
+
+# 8: 42 | 42 8
+# 11: 42 31 | 42 11 31
+
+
+
+
+
+
+
+
+return
+
 puts 'Running tests...'
 
 match_count = test_strings.count do |test|
